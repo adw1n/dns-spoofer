@@ -1,7 +1,7 @@
 #include <Python.h>
 #include <libnet.h>
 
-//#define RUN_WITH_ALLOW_THREADS
+#define RUN_WITH_ALLOW_THREADS
 
 /**
  * @param vulnerable_host_mac_addr: host that you are going to attack
@@ -9,8 +9,12 @@
  * TODO add ability to choose interface - libnet_init second argument
  * @return returns NULL on success and pointer to error_buffer on error.
  * The ownership of the error_buffer is transferred (error_buffer will need to be freed by the function that called spoof_arp).
+ * TODO this is overly complicated - maybe return bool true/false and
+ * TODO take an additional argument char * error_buffer and only set it if an error occurred
+ * TODO on malloc returning NULL set return type to false (error) but set the error_buffer the NULL and let the outer block handle the error
+ * TODO without doing here the Py_BLOCK_THREADS magic
  */
-const char *
+static const char *
 
 #ifdef RUN_WITH_ALLOW_THREADS
 spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry, PyThreadState * _save){
@@ -24,9 +28,9 @@ spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry){
     u_int32_t target_ip_addr, zero_ip_addr;
     u_int8_t zero_hw_addr[6]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     struct libnet_ether_addr* src_hw_addr;
-    char errbuf[LIBNET_ERRBUF_SIZE];
+    char libnet_init_errbuf[LIBNET_ERRBUF_SIZE];
 
-    if((ln = libnet_init(LIBNET_LINK, NULL, errbuf))==NULL){
+    if((ln = libnet_init(LIBNET_LINK, NULL, libnet_init_errbuf))==NULL){
         char * error_buffer = malloc(LIBNET_ERRBUF_SIZE);
         if(error_buffer==NULL) {
 #ifdef RUN_WITH_ALLOW_THREADS
@@ -35,7 +39,7 @@ spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry){
 #endif
              return (char *) PyErr_NoMemory();
         }
-        strncpy(error_buffer, errbuf, LIBNET_ERRBUF_SIZE);
+        strncpy(error_buffer, libnet_init_errbuf, LIBNET_ERRBUF_SIZE);
         return error_buffer;
     }
     if((src_hw_addr = libnet_get_hwaddr(ln))==NULL)
@@ -135,7 +139,12 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
 
 
 static PyMethodDef DnsSpooferMethods[] = {
-    {"spoof_arp",  dnsspoofer_spoof_arp, METH_VARARGS, "Spoof arp."},
+    {"spoof_arp",  dnsspoofer_spoof_arp, METH_VARARGS,
+            PyDoc_STR("spoof_arp(vulnerable_host_mac_addr: bytes, ip_cache_entry: bytes) -> None \n\n"
+                      "Spoof arp cache of a victim.\n"
+                      "Releases the GIL while doing the actual spoofing.\n"
+                      "@param vulnerable_host_mac_addr - victim's mac addr\n"
+                      "@param ip_cache_entry - ip address to override cache entry with your own mac address")},
     {NULL, NULL, 0, NULL}
 };
 
@@ -143,7 +152,7 @@ static PyMethodDef DnsSpooferMethods[] = {
 static struct PyModuleDef dnsspoofer_module = {
    PyModuleDef_HEAD_INIT,
    "dnsspoofer",
-   NULL,
+   PyDoc_STR("Module for ARP and DNS spoofing."),
    -1,
    DnsSpooferMethods
 };

