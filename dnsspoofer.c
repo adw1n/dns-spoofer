@@ -86,10 +86,10 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
 {
     PyBytesObject* target_mac_addr;
     PyBytesObject* ip_to_spoof; //TODO allow to either be bytes or str
-    const char* device;
-    ssize_t device_len;
+    const char* device=NULL;
+    ssize_t device_len=0;
 
-    if (!PyArg_ParseTuple(args, "SSz#", &target_mac_addr, &ip_to_spoof, &device, &device_len))
+    if (!PyArg_ParseTuple(args, "SS|z#", &target_mac_addr, &ip_to_spoof, &device, &device_len))
         return NULL;
 
     const u_int8_t * vulnerable_host_mac_addr;
