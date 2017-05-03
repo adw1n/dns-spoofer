@@ -1,10 +1,25 @@
+dist: trusty
+sudo: false
 language: python
 python:
   - 3.6
   - 3.5
   - 3.4
-before_install:
-  - sudo apt-get update -q
-  - sudo apt-get install -y libnet-dev libpcap-dev
+env:
+  - CXX="g++-5" CC="gcc-5"
+addons:
+    apt:
+        sources:
+            - boost-latest
+            - ubuntu-toolchain-r-test
+        packages:
+            - g++-5
+            - gcc-5
+            - libboost1.55-all-dev
+            - libnet-dev
+            - libpcap-dev
+
 script:
   - python setup.py build
+#TODO make
+  - g++-5 test.cpp dns.cpp  -o test -lboost_unit_test_framework -std=c++11 -lpcap && ./test
