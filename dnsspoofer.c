@@ -17,11 +17,11 @@
 static const char *
 
 #ifdef RUN_WITH_ALLOW_THREADS
-spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry, PyThreadState * _save){
+spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry, const char * device, PyThreadState * _save){
 #endif
 
 #ifndef RUN_WITH_ALLOW_THREADS
-spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry){
+spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry, const char * device){
 #endif
 
     libnet_t *ln;
@@ -30,7 +30,7 @@ spoof_arp(const u_int8_t* vulnerable_host_mac_addr, char* ip_cache_entry){
     struct libnet_ether_addr* src_hw_addr;
     char libnet_init_errbuf[LIBNET_ERRBUF_SIZE];
 
-    if((ln = libnet_init(LIBNET_LINK, NULL, libnet_init_errbuf))==NULL){
+    if((ln = libnet_init(LIBNET_LINK, device, libnet_init_errbuf))==NULL){
         char * error_buffer = malloc(LIBNET_ERRBUF_SIZE);
         if(error_buffer==NULL) {
 #ifdef RUN_WITH_ALLOW_THREADS
@@ -86,10 +86,11 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
 {
     PyBytesObject* target_mac_addr;
     PyBytesObject* ip_to_spoof; //TODO allow to either be bytes or str
+    const char* device;
+    ssize_t device_len;
 
-    if (!PyArg_ParseTuple(args, "SS", &target_mac_addr, &ip_to_spoof))
+    if (!PyArg_ParseTuple(args, "SSz#", &target_mac_addr, &ip_to_spoof, &device, &device_len))
         return NULL;
-
 
     const u_int8_t * vulnerable_host_mac_addr;
     Py_ssize_t vulnerable_host_mac_addr_size;
@@ -108,11 +109,11 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
     char * error_buffer;
 #ifdef RUN_WITH_ALLOW_THREADS
     Py_BEGIN_ALLOW_THREADS
-    error_buffer=spoof_arp(vulnerable_host_mac_addr, ip_cache_entry, _save);
+    error_buffer=spoof_arp(vulnerable_host_mac_addr, ip_cache_entry, device, _save);
 #endif
 
 #ifndef RUN_WITH_ALLOW_THREADS
-    error_buffer=spoof_arp(vulnerable_host_mac_addr, ip_cache_entry);
+    error_buffer=spoof_arp(vulnerable_host_mac_addr, ip_cache_entry, device);
 #endif
 
 
@@ -140,11 +141,12 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
 
 static PyMethodDef DnsSpooferMethods[] = {
     {"spoof_arp",  dnsspoofer_spoof_arp, METH_VARARGS,
-            PyDoc_STR("spoof_arp(vulnerable_host_mac_addr: bytes, ip_cache_entry: bytes) -> None \n\n"
+            PyDoc_STR("spoof_arp(vulnerable_host_mac_addr: bytes, ip_cache_entry: bytes, device: Union[str,bytes] = None) -> None \n\n"
                       "Spoof arp cache of a victim.\n"
                       "Releases the GIL while doing the actual spoofing.\n"
                       "@param vulnerable_host_mac_addr - victim's mac addr\n"
-                      "@param ip_cache_entry - ip address to override cache entry with your own mac address")},
+                      "@param ip_cache_entry - ip address to override cache entry with your own mac address\n"
+                      "@param device - network interface. If device is set to None, libnet will try to choose a suitable interface.")},
     {NULL, NULL, 0, NULL}
 };
 
