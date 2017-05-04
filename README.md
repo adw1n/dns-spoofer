@@ -1,8 +1,19 @@
+[![Build Status](https://travis-ci.org/adw1n/dns-spoofer.svg?branch=master)](https://travis-ci.org/adw1n/dns-spoofer)
+![implementation](https://img.shields.io/badge/python-3.4%2C%203.5%2C%203.6-blue.svg)
+![versions](https://img.shields.io/badge/implementation-cpython-blue.svg)
+
 Work In Progress
+### About
+man in the middle attacks
+
+#### Limitations
+* Ethernet II networks
+* ipv4 only
+
 
 ### Dependencies
 * libnet-dev
-
+* libpcap-dev
 
 ### Install
 I recommend using a virtualenv for this.
@@ -42,9 +53,4 @@ dnsspoofer.spoof_arp(b"\x10\x20\x30\x40\x50\x60",b"192.168.1.100")
 ```
 
 #### DNS poisoning
-TODO
-
-
-#### Notes
-* dns-spoofer is releasing the GIL while doing it's magic. So you shouldn't have any problems with using multiple threads to
-periodically spoof multiple hosts.
+see the [example.py](example.py) file
