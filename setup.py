@@ -1,6 +1,6 @@
 from distutils.core import setup, Extension
 
-module1 = Extension('dnsspoofer',
+dnsspoofer_module = Extension('dnsspoofer',
                     libraries = ['net', 'pcap'],
                     extra_compile_args=['-std=c++11'],
                     language='c++',
@@ -8,5 +8,5 @@ module1 = Extension('dnsspoofer',
 
 setup (name = 'dnsspoofer',
        version = '1.0',
-       description = 'Spoof like there is no tomorrow!',
-       ext_modules = [module1])
+       description = 'Spoof DNS and ARP like there is no tomorrow!',
+       ext_modules = [dnsspoofer_module])
