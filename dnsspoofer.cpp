@@ -2,6 +2,7 @@
 #include <libnet.h>
 #include <stdexcept>
 #include <iostream>
+#include <limits>
 #include "dns.hpp"
 
 //realeasing the GIL won't make almost any difference
@@ -38,9 +39,9 @@ spoof_arp(const uint8_t* vulnerable_host_mac_addr, char* ip_cache_entry, const c
     }
     if((src_hw_addr = libnet_get_hwaddr(ln))==NULL)
         goto cleanup_error;
-    if((target_ip_addr = libnet_name2addr4(ln, ip_cache_entry, LIBNET_RESOLVE)) == -1)
+    if((target_ip_addr = libnet_name2addr4(ln, ip_cache_entry, LIBNET_RESOLVE)) == std::numeric_limits<uint32_t>::max())
         goto cleanup_error;
-    if((zero_ip_addr = libnet_name2addr4(ln, host_name, LIBNET_DONT_RESOLVE)) == -1)
+    if((zero_ip_addr = libnet_name2addr4(ln, host_name, LIBNET_DONT_RESOLVE)) == std::numeric_limits<uint32_t>::max())
         goto cleanup_error;
     if(libnet_autobuild_arp(
             ARPOP_REPLY,                       /* operation type       */

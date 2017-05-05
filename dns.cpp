@@ -74,6 +74,7 @@ uint32_t bytes_to_int(const char* bytes, ssize_t len){
         case 4:
             return ntohl(*((uint32_t * ) bytes));
     }
+    throw std::invalid_argument("not a 1,2 or 4");
 }
 
 
@@ -103,7 +104,7 @@ uint16_t calculate_ipv4_checksum(const iphdr* ip_hdr){
     //TODO make this work both for big endian and little endian...
     const char * data= (const char* )ip_hdr;
     uint64_t sum=0;
-    for(int val_num=0;val_num<sizeof(iphdr)/2; ++val_num){
+    for(size_t val_num=0;val_num<sizeof(iphdr)/2; ++val_num){
         uint16_t val = *((uint16_t *)(data+val_num*2));
         sum+=htons(val);
     }
@@ -123,7 +124,7 @@ void send_dns_response(DnsSection dns_section_response, std::string destination_
     inet_pton(AF_INET, destination_ip.c_str(), &dest.sin_addr.s_addr);
 
     std::string payload = dns_section_response.to_bytes();
-    ssize_t payload_size = payload.size();
+    auto payload_size = payload.size();
     iphdr ip_hdr;
     udphdr udp_hdr;
     ip_hdr.ihl = 5; //no Options
@@ -180,7 +181,7 @@ void dns_frame_handler(u_char *arg_array, const struct pcap_pkthdr *h, const u_c
     ssize_t ip_size = sizeof( struct ip );
     ssize_t udp_size = sizeof( struct udphdr );
 
-    const struct ether_header *ethernet = ( struct ether_header* ) bytes;
+//    const struct ether_header *ethernet = ( struct ether_header* ) bytes;
     const struct ip *ip_hdr = (struct ip*) ( bytes + ETH_HLEN );
     if(ip_hdr->ip_v==4){
         const struct udphdr *udp = (const struct udphdr*) (bytes + ETH_HLEN + ip_size );
@@ -239,7 +240,7 @@ void run_dns_spoof(const std::string& interface, std::vector<DNSVictim>* victims
         goto handle_error;
     pcap_activate_result = pcap_activate(handle);
     if(pcap_activate_result>0){ //warning - continue
-        pcap_perror(handle, "warning pcap_activate_result: ");
+        pcap_perror(handle, const_cast<char*>("warning pcap_activate_result: "));
     }
     if(pcap_activate_result<0) //error - abort
         goto handle_error;
