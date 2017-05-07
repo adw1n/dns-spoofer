@@ -32,6 +32,40 @@ BOOST_AUTO_TEST_CASE( single_dns_query )
     BOOST_CHECK(section.answers.empty());
 }
 
+BOOST_AUTO_TEST_CASE( dns_query_multiple_questions )
+{
+    /*
+     * 3 questions
+     * wp.pl
+     * play.google.com
+     * notifications.google.com
+     */
+    const char * dns_query = "\xc4\x01\x01\x00\x00\03\x00\x00\x00\x00\x00\x00\x02\x77\x70\x02\x70\x6c\x00\x00\x01\x00\x01"
+            "\x04\x70\x6c\x61\x79\x06\x67\x6f\x6f\x67\x6c\x65\03\x63\x6f\x6d\x00\x00\x01\x00\x01"//play.google.com
+    "\u000d\x6e\x6f\x74\x69\x66\x69\x63\x61\x74\x69\x6f\x6e\x73\06\x67\x6f\x6f\x67\x6c\x65\03\x63\x6f\x6d\x00\x00\x1c\x00\x01"; //notifications.google.com
+    auto section = parse_dns_section(dns_query, 23);
+    BOOST_CHECK_EQUAL( section.transaction_ID , 0xc401 );
+    BOOST_CHECK_EQUAL( section.flags , 0x0100 );
+    BOOST_CHECK_EQUAL( section.questions , 0x3 );
+    BOOST_CHECK_EQUAL( section.answer_PRs , 0x0 );
+    BOOST_CHECK_EQUAL( section.authority_PRs , 0x0 );
+    BOOST_CHECK_EQUAL( section.additional_PRs , 0x0 );
+    BOOST_CHECK(strcmp(section.queries[0].name, "\x02wp\x02pl")==0);
+    BOOST_CHECK_EQUAL(section.queries[0].get_name(), std::string("wp.pl"));
+    BOOST_CHECK_EQUAL(section.queries[0].type, 0x1);
+    BOOST_CHECK_EQUAL(section.queries[0].class_, 0x1);
+    BOOST_CHECK(strcmp(section.queries[1].name, "\04play\06google\03com")==0);
+    BOOST_CHECK_EQUAL(section.queries[1].get_name(), std::string("play.google.com"));
+    BOOST_CHECK_EQUAL(section.queries[1].type, 0x1);
+    BOOST_CHECK_EQUAL(section.queries[1].class_, 0x1);
+    BOOST_CHECK_EQUAL(strlen(section.queries[2].name), 25);
+    BOOST_CHECK(strcmp(section.queries[2].name, "\u000dnotifications\06google\03com")==0);
+    BOOST_CHECK_EQUAL(section.queries[2].get_name().substr(0,14), std::string("notifications.google.com").substr(0,14));
+    BOOST_CHECK_EQUAL(section.queries[2].type, 0x1c); //AAAA
+    BOOST_CHECK_EQUAL(section.queries[2].class_, 0x1);
+    BOOST_CHECK(section.answers.empty());
+}
+
 
 BOOST_AUTO_TEST_CASE( dns_query_to_bytes )
 {
@@ -44,7 +78,7 @@ BOOST_AUTO_TEST_CASE( dns_query_to_bytes )
     BOOST_CHECK_EQUAL( bytes , real_url );
 
 
-    const char* facebook_com="\x08\x66\x61\x63\x65\x62\x6f\x6f\x6b\x03\x63\x6f\x6d\x00";
+    const char* facebook_com="\x08\x66\x61\x63\x65\x62\x6f\x6f\x6b\03\x63\x6f\x6d\x00";
     query.name=facebook_com;
     bytes=query.get_name();
     real_url = "facebook.com";

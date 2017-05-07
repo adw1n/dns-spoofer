@@ -95,6 +95,7 @@ DnsSection parse_dns_section(const char * bytes, ssize_t len){
         dns_section.queries[question_number].name=question_start_pointer;
         dns_section.queries[question_number].type=bytes_to_int(question_start_pointer + question_length, 2);
         dns_section.queries[question_number].class_=bytes_to_int(question_start_pointer + question_length + 2, 2);
+        question_start_pointer= question_start_pointer+ question_length+2+2;
     }
     return dns_section;
 }
