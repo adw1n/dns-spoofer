@@ -18,8 +18,11 @@ addons:
             - libboost1.55-all-dev
             - libnet-dev
             - libpcap-dev
+#            - linux-headers-`uname -r`
+# TODO clang
 
 script:
   - python setup.py build
-#TODO make
-  - g++-5 test.cpp dns.cpp  -o test -lboost_unit_test_framework -std=c++11 -lpcap && ./test
+  - g++-5 -Wall test.cpp dns.cpp  -o test -lboost_unit_test_framework -std=c++11 -lpcap && ./test
+#  - cd firewall && make
+  - cd firewall && g++-5 -Wall test.cpp -o test -lboost_unit_test_framework -DCPP_TESTS && ./test
