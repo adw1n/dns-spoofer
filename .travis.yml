@@ -18,11 +18,17 @@ addons:
             - libboost1.55-all-dev
             - libnet-dev
             - libpcap-dev
-#            - linux-headers-`uname -r`
-# TODO clang
+            - linux-headers-`uname -r`
+            # with clang 3.4 on ubuntu 14.04 I was getting error: no member named 'max_align_t' in the global namespace
+            # possible bug https://github.com/philsquared/Catch/issues/334
+            - clang-3.6++
 
 script:
   - python setup.py build
+  - rm -rf build && CC=clang-3.6 CXX=clang++-3.6  python setup.py build
   - g++-5 -Wall test.cpp dns.cpp  -o test -lboost_unit_test_framework -std=c++11 -lpcap && ./test
-#  - cd firewall && make
+  - clang++-3.6 -Wall test.cpp dns.cpp  -o test -lboost_unit_test_framework -std=c++11 -lpcap && ./test
+  - cd firewall && make CC=gcc-5
+  - cd firewall && make CC=clang-3.6
   - cd firewall && g++-5 -Wall test.cpp -o test -lboost_unit_test_framework -DCPP_TESTS && ./test
+  - cd firewall && clang++-3.6 -Wall test.cpp -o test -lboost_unit_test_framework -DCPP_TESTS && ./test

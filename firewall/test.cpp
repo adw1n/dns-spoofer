@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE( test_calculate_blocked_sites )
     BOOST_CHECK_EQUAL(blocked_sites[1][0], 8);
     BOOST_CHECK_EQUAL(blocked_sites[1][9], 3);
     BOOST_CHECK_EQUAL(blocked_sites[1][10], 'c');
-    BOOST_CHECK_EQUAL(strncmp(blocked_sites[1], "\u0008facebook\03com",10),0);
+    BOOST_CHECK_EQUAL(strncmp(blocked_sites[1], "\x08""facebook\03com",10),0);
     BOOST_CHECK_EQUAL(strncmp(blocked_sites[2], "\05music\x06google\03com",13),0);
     BOOST_CHECK_EQUAL(strncmp(blocked_sites[2], "\05music\06google\03com",14),0);
     BOOST_CHECK_EQUAL(strncmp(blocked_sites[3], "\07youtube\03com",13),0);
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE( test_verify_dns_multiple_questions_should_pass )
 {
     const char * dns_query = "\xc4\x01\x01\x00\x00\03\x00\x00\x00\x00\x00\x00\x02\x77\x70\x02\x70\x6c\x00\x00\x01\x00\x01" //wp.pl
             "\x04\x70\x6c\x61\x79\x06\x67\x6f\x6f\x67\x6c\x65\03\x63\x6f\x6d\x00\x00\x01\x00\x01"//play.google.com
-            "\u000d\x6e\x6f\x74\x69\x66\x69\x63\x61\x74\x69\x6f\x6e\x73\06\x67\x6f\x6f\x67\x6c\x65\03\x63\x6f\x6d\x00\x00\x1c\x00\x01"; //notifications.google.com
+            "\x0d""\x6e\x6f\x74\x69\x66\x69\x63\x61\x74\x69\x6f\x6e\x73\06\x67\x6f\x6f\x67\x6c\x65\03\x63\x6f\x6d\x00\x00\x1c\x00\x01"; //notifications.google.com
     const char * blocked_sites[]={"\02aa\02pl", "\07youtube\03com"};
     BOOST_CHECK_EQUAL(verify_dns(dns_query,23+21+30 , (char**)(blocked_sites), 2), true);
 }
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE( test_verify_dns_multiple_questions_should_block )
 {
     const char * dns_query = "\xc4\x01\x01\x00\x00\03\x00\x00\x00\x00\x00\x00\x02\x77\x70\x02\x70\x6c\x00\x00\x01\x00\x01" //wp.pl
             "\x04\x70\x6c\x61\x79\x06\x67\x6f\x6f\x67\x6c\x65\03\x63\x6f\x6d\x00\x00\x01\x00\x01"//play.google.com
-            "\u000d\x6e\x6f\x74\x69\x66\x69\x63\x61\x74\x69\x6f\x6e\x73\06\x67\x6f\x6f\x67\x6c\x65\03\x63\x6f\x6d\x00\x00\x1c\x00\x01"; //notifications.google.com
+            "\x0d""\x6e\x6f\x74\x69\x66\x69\x63\x61\x74\x69\x6f\x6e\x73\06\x67\x6f\x6f\x67\x6c\x65\03\x63\x6f\x6d\x00\x00\x1c\x00\x01"; //notifications.google.com
     const char * blocked_sites[]={"\04play\06google\03com", "\07youtube\03com"};
     BOOST_CHECK_EQUAL(verify_dns(dns_query,23+21+30 , (char**)(blocked_sites), 2), false);
 }
