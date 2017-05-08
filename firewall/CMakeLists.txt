@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.6)
+project(dnsfirewall_tests)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -DCPP_TESTS")
+set(SOURCE_FILES test.cpp)
+add_executable(dnsfirewall_tests ${SOURCE_FILES})
