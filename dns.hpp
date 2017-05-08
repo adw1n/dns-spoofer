@@ -64,7 +64,8 @@ public:
 
 template<class T>
 void write_bytes_to_stream(const T& t, std::ostringstream& oss){
-    oss.write((char *) &t, sizeof(t));
+    static_assert(std::is_same<T, uint32_t >::value or std::is_same<T, uint16_t >::value, "Invalid type passed");
+    oss.write(reinterpret_cast<const char*>(&t), sizeof(T));
 }
 
 uint32_t bytes_to_int(const char* bytes, ssize_t len);

