@@ -14,15 +14,12 @@ addons:
             - boost-latest
             - ubuntu-toolchain-r-test
         packages:
-            - g++-5
-            - gcc-5
+            - $CXX
+            - $CC
             - libboost1.55-all-dev
             - libnet-dev
             - libpcap-dev
             - linux-headers-`uname -r`
-            # with clang 3.4 on ubuntu 14.04 I was getting error: no member named 'max_align_t' in the global namespace
-            # possible bug https://github.com/philsquared/Catch/issues/334
-            - clang-3.6++
 
 script:
   - python setup.py build
