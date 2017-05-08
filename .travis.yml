@@ -14,13 +14,12 @@ addons:
             - boost-latest
             - ubuntu-toolchain-r-test
         packages:
-            - $CXX
-            - $CC
             - libboost1.55-all-dev
             - libnet-dev
             - libpcap-dev
             - linux-headers-`uname -r`
-
+before_install:
+  - sudo apt-get install $CXX $CC
 script:
   - python setup.py build
   - $CXX -Wall test.cpp dns.cpp -o test -lboost_unit_test_framework -std=c++11 -lpcap && ./test
