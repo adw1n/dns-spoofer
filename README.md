@@ -69,7 +69,7 @@ The DNS spoofing presented in example.py works, provided that you are faster tha
 The additional benefit of blocking gateway's reponses to the spoofed requests is that it is going to be harder to notice the spoofing going around form the victim's point of view.
 ##### Solution
 **!!!WARNING!!!  
-Badly writen kernel module can screw up your system. I recommend using for this a VM. Your mileage may vary.  
+Badly written kernel module can screw up your system. I recommend using for this a VM. Your mileage may vary.  
 !!!WARNING!!!**
 
 ```bash
@@ -79,10 +79,10 @@ modinfo dnsfirewall.ko # show info about the module
 
 
 # load the module
-sudo insmod dnsfirewall.ko blocked_sites="wp.pl|facebook.com|youtube.com" gateway=192.168.1.1 victim=192.168.1.100
+sync && sudo insmod dnsfirewall.ko blocked_sites="wp.pl|facebook.com|youtube.com" gateway=192.168.1.1 victim=192.168.1.100
 # Module writes messages to SYSLOG with prefix 'DNS-SPOOFER'.
 
 
 # remove the module
-sudo rmmod dnsfirewall.ko
+sync && sudo rmmod dnsfirewall.ko
 ```
