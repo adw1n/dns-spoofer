@@ -17,7 +17,7 @@ man in the middle attacks
 * c++ compiler with c++11 support
 
 For the "firewall" module:
-* linux kernel >=4 (tested on 4.2, 4.6 and 4.9)  
+* linux kernel >=4 (tested on 4.2, 4.4, 4.6 and 4.9)  
 For older kernels you will probably have to change some functions signatures.
 ### Install
 
