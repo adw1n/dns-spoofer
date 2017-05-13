@@ -178,6 +178,8 @@ DnsSection construct_dns_section_response(DnsSection query, const std::string& i
 
 
 void dns_frame_handler(u_char *arg_array, const struct pcap_pkthdr *h, const u_char *bytes){
+    if(h->caplen!=h->len)
+        return;
     auto victims  = (std::vector<DNSVictim>*) arg_array;
     ssize_t ip_size = sizeof( struct ip );
     ssize_t udp_size = sizeof( struct udphdr );
