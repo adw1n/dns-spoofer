@@ -223,7 +223,7 @@ void run_dns_spoof(const std::string& interface, std::vector<DNSVictim>* victims
     bpf_u_int32 netp, maskp;
     struct bpf_program fp;
 
-    char errbuf[PCAP_ERRBUF_SIZE];
+    char errbuf[PCAP_ERRBUF_SIZE]={0};
     int64_t pcap_activate_result;
 
 
@@ -258,6 +258,11 @@ void run_dns_spoof(const std::string& interface, std::vector<DNSVictim>* victims
 
     handle_error:
         auto pcap_error = pcap_geterr(handle);
+        std::string pcap_err_buf;
+        if(pcap_error!=NULL)
+            pcap_err_buf=pcap_error;
+        if(strlen(errbuf))
+            pcap_err_buf+=errbuf;
         pcap_close(handle);
-        throw PcapError(pcap_error);
+        throw PcapError(pcap_err_buf);
 }
