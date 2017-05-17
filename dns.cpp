@@ -8,6 +8,7 @@
 #include <csignal>
 #include <algorithm>
 #include <list>
+#include <errno.h>
 
 std::string DNSQuery::to_bytes(){
     std::ostringstream oss;
@@ -154,8 +155,8 @@ void send_dns_response(DnsSection dns_section_response, std::string destination_
 
     auto data = oss.str();
 
-    if(sendto(fd,data.c_str(),data.size(),0, reinterpret_cast<sockaddr*>(&dest),sizeof(dest))==-1)
-        perror("sendto error\n");
+    if(sendto(fd,data.c_str(),data.size(),0, reinterpret_cast<sockaddr*>(&dest),sizeof(dest))<0)
+        std::cerr<<"sendto error: "<<strerror(errno);
 }
 
 
@@ -207,7 +208,7 @@ void dns_frame_handler(u_char *arg_array, const struct pcap_pkthdr *h, const u_c
 
 std::list<pcap_t*> pcap_handles;
 void stop_dns_spoofing(){
-    std::cout<<"stop_dns_spoofing"<<std::endl;
+    std::cout<<"DNS spoofing stopped"<<std::endl;
     while(!pcap_handles.empty()) {
         auto handle = pcap_handles.front();
         if(handle!=NULL)

