@@ -71,7 +71,7 @@ unsigned int main_hook(
                     ssize_t dns_section_length=(skb->len -dns_section_offset);
                     if(dns_section_length>0 && ip_header->saddr == gateway_ip && ip_header->daddr == victim_ip
                        && !verify_dns(dns_section,(size_t)dns_section_length,sites,number_of_sites)){
-                        //skb->len (does not count the physical layer (ethernet) header)
+                        //skb->len (does not count the link layer (ethernet) header)
                         printk(KERN_INFO
                         MY_MODULE_NAME
                         "DROPPED DNS packet from %s to %s, sport %d, dport %d, data len %d\n",

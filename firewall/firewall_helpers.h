@@ -15,12 +15,12 @@
     #include <linux/vmalloc.h>
 #endif
 
-size_t strlen_to_char(const char * buf, char byte){
+static size_t strlen_to_char(const char * buf, char byte){
     int i;
     for(i=0;;++i)
         if(buf[i]==byte || buf[i]=='\x00') return i;
 }
-size_t count_characters_in_string(const char* s, char byte){
+static size_t count_characters_in_string(const char* s, char byte){
     size_t len = strlen(s);
     size_t i;
     size_t res=0;
@@ -28,7 +28,7 @@ size_t count_characters_in_string(const char* s, char byte){
         if(s[i]==byte) res++;
     return res;
 }
-bool calculate_blocked_sites(char * sites_string, char *** blocked_sites, size_t * number_of_sites){
+static bool calculate_blocked_sites(char * sites_string, char *** blocked_sites, size_t * number_of_sites){
     *number_of_sites = count_characters_in_string(sites_string,'|')+1;
     *blocked_sites = (char**) vmalloc(*number_of_sites * sizeof(char *));
     if(*blocked_sites==NULL)
@@ -38,9 +38,9 @@ bool calculate_blocked_sites(char * sites_string, char *** blocked_sites, size_t
     for(site_no=0; site_no<*number_of_sites; ++site_no){
         size_t site_len = strlen_to_char(sites_string+site_name_start_position, '|');
         char* site = (char*) vmalloc(site_len+1+1); //+1 for \x00 and +1 for the first digit
+        (*blocked_sites)[site_no]=site;
         if(site==NULL)
             return false;
-        (*blocked_sites)[site_no]=site;
         strncpy(site+1, sites_string +site_name_start_position, site_len);
         site[0]=strlen_to_char(sites_string +site_name_start_position, '.');
         site_name_start_position+=site_len+1;
@@ -55,10 +55,14 @@ bool calculate_blocked_sites(char * sites_string, char *** blocked_sites, size_t
     return true;
 }
 
-void free_sites(char*** blocked_sites, size_t number_of_sites){
+static void free_sites(char*** blocked_sites, size_t number_of_sites){
     if(*blocked_sites==NULL) return;
     size_t site_no;
     for(site_no=0; site_no<number_of_sites; ++site_no){
+        // free on NULL isn't a problem, but there is a risk that the data further down has uninitialized
+        // pointers with meaningless values (no calloc)
+        if((*blocked_sites)[site_no]==NULL)
+            break;
         vfree((*blocked_sites)[site_no]);
     }
     vfree(*blocked_sites);
@@ -66,7 +70,7 @@ void free_sites(char*** blocked_sites, size_t number_of_sites){
 }
 
 
-bool verify_dns(const char* bytes, size_t len, char** blocked_sites, size_t number_of_sites){
+static bool verify_dns(const char* bytes, size_t len, char** blocked_sites, size_t number_of_sites){
     if(len<6)
         return true;
     // TODO consider checking answers > 0 to block only responses
