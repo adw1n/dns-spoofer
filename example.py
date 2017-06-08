@@ -32,7 +32,9 @@ def spoof_dns():
                 u"wikipedia.org": u"51.254.121.149",
                 u"wikipedia.com": u"51.254.121.149",
                 u"youtube.com": u"51.254.121.149",
-                u"wp.pl": u"51.254.121.149"
+                u"www.youtube.com": u"51.254.121.149",  # some browsers add www to URLs
+                u"wp.pl": u"51.254.121.149",
+                u"www.wp.pl": u"51.254.121.149"
             }
         )
     }
