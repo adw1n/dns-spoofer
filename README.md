@@ -68,7 +68,7 @@ I haven't implemented the reverse DNS lookups (.in-addr.arpa requests), but this
 #### Netfilter kernel module
 The DNS spoofing presented in example.py works, provided that you are faster than the gateway. This might not always be the case - for example the gateway might be caching the results. In this case the first time the victim tries to ping facebook.com everything might be working as expected, but the next time he asks about facebook.com the gateway will respond immediately. This can result in your response reaching the victim too late. This is super easy to notice in Wireshark.
 
-The additional benefit of blocking gateway's reponses to the spoofed requests is that it is going to be harder to notice the spoofing going around form the victim's point of view.
+The additional benefit of blocking gateway's reponses to the spoofed requests is that it is going to be harder to notice the spoofing going around form the victim's point of view.  
 **!!!WARNING!!!  
 Badly written kernel module can screw up your system. I recommend using a VM for this. Your mileage may vary.**
 
@@ -80,7 +80,7 @@ modinfo dnsfirewall.ko # show info about this module
 
 # load the module
 sync && sudo insmod dnsfirewall.ko blocked_sites="wp.pl|wikipedia.org|wikipedia.com|youtube.com" gateway=192.168.1.1 victim=192.168.1.100
-# Module writes messages to SYSLOG with prefix 'DNS-SPOOFER'.
+# Module writes messages to SYSLOG with prefix 'DNS-SPOOFER'. Use 'dmesg' to see the syslog.
 
 
 # remove the module

@@ -37,6 +37,7 @@ static char * blocked_sites=NULL;
 static char ** sites=NULL;
 static size_t number_of_sites=0;
 
+static bool block_requests=true;
 
 #ifdef EXTENDED_DEBUGGING
 union ip_address {
@@ -64,18 +65,27 @@ unsigned int main_hook(
         // udp_header=udp_hdr(skb);
         udp_header = (struct udphdr*)((char*)ip_header + (ip_header->ihl * 4));
         if(udp_header!=NULL) {
-            if (__constant_htons(udp_header->source) == 53) {
+            if ((__constant_htons(udp_header->dest) == 53 && block_requests) ||
+                (__constant_htons(udp_header->source) == 53 && !block_requests)) {
                 if(skb->len>0){
                     uint32_t dns_section_offset=sizeof(struct iphdr) + sizeof(struct udphdr);
                     uint8_t * dns_section = (skb->data + dns_section_offset);
                     ssize_t dns_section_length=(skb->len -dns_section_offset);
-                    if(dns_section_length>0 && ip_header->saddr == gateway_ip && ip_header->daddr == victim_ip
+                    if(dns_section_length>0 && (
+                            (!block_requests && ip_header->saddr == gateway_ip && ip_header->daddr == victim_ip)
+                            ||
+                            (block_requests && ip_header->saddr == victim_ip && ip_header->daddr == gateway_ip)
+                       )
                        && !verify_dns(dns_section,(size_t)dns_section_length,sites,number_of_sites)){
                         //skb->len (does not count the link layer (ethernet) header)
                         printk(KERN_INFO
-                        MY_MODULE_NAME
-                        "DROPPED DNS packet from %s to %s, sport %d, dport %d, data len %d\n",
-                        gateway,victim, __constant_htons(udp_header->source), __constant_htons(udp_header->dest), skb->len
+                            MY_MODULE_NAME
+                            "DROPPED DNS packet from %s to %s, sport %d, dport %d, data len %d\n",
+                            block_requests ? victim : gateway,
+                            block_requests ? gateway : victim,
+                            __constant_htons(udp_header->source),
+                            __constant_htons(udp_header->dest),
+                            skb->len
                         );
                         return NF_DROP;
                     }
@@ -159,5 +169,8 @@ MODULE_PARM_DESC(gateway, " The gateway's IP address - for example 192.168.1.1")
 
 module_param(victim, charp, 0000);
 MODULE_PARM_DESC(victim, " Victim's IP address - for example 192.168.1.100");
+
+module_param(block_requests, bool, 0000);
+MODULE_PARM_DESC(block_requests, " 1 to block requests from being forwarded to the gateway (requests for blocked sites won't reach the gateway), 0 to block responses from the gateway from being forwarded to the victim. Default = 1.");
 
 MODULE_DESCRIPTION(DNSFIREWALL_DESC);
