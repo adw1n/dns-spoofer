@@ -20,6 +20,7 @@ man in the middle attacks
 For the "firewall" module:
 * linux kernel >=4 (tested on 4.2, 4.4, 4.6 and 4.9)  
 For older kernels you will probably have to change some function signatures.
+* installed linux headers
 ### Install
 
 ```bash
@@ -64,22 +65,21 @@ dnsspoofer.spoof_arp(b"\x10\x20\x30\x40\x50\x60",b"192.168.1.100")
 see the [example.py](example.py) file
 
 I haven't implemented the reverse DNS lookups (.in-addr.arpa requests), but this works fine in most cases without them too.
-##### Netfilter kernel module
+#### Netfilter kernel module
 The DNS spoofing presented in example.py works, provided that you are faster than the gateway. This might not always be the case - for example the gateway might be caching the results. In this case the first time the victim tries to ping facebook.com everything might be working as expected, but the next time he asks about facebook.com the gateway will respond immediately. This can result in your response reaching the victim too late. This is super easy to notice in Wireshark.
 
 The additional benefit of blocking gateway's reponses to the spoofed requests is that it is going to be harder to notice the spoofing going around form the victim's point of view.
-##### Solution
 **!!!WARNING!!!  
 Badly written kernel module can screw up your system. I recommend using a VM for this. Your mileage may vary.**
 
 ```bash
 cd firewall
 make
-modinfo dnsfirewall.ko # show info about the module
+modinfo dnsfirewall.ko # show info about this module
 
 
 # load the module
-sync && sudo insmod dnsfirewall.ko blocked_sites="wp.pl|facebook.com|youtube.com" gateway=192.168.1.1 victim=192.168.1.100
+sync && sudo insmod dnsfirewall.ko blocked_sites="wp.pl|wikipedia.org|wikipedia.com|youtube.com" gateway=192.168.1.1 victim=192.168.1.100
 # Module writes messages to SYSLOG with prefix 'DNS-SPOOFER'.
 
 

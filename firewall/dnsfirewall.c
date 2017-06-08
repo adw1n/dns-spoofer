@@ -18,7 +18,7 @@
 #define DNSFIREWALL_DESC "DNS firewall that blocks all dns responses (for some predefined sites) coming in from one IP to the other one.\n"\
 "Module writes messages to SYSLOG with prefix 'DNS-SPOOFER'.\n"\
 "usage:\n"\
-"insmod dnsfirewall.ko blocked_sites=\"wp.pl|facebook.com|youtube.com\" gateway=192.168.1.1 victim=192.168.1.100\n"\
+"insmod dnsfirewall.ko blocked_sites=\"wp.pl|wikipedia.org|wikipedia.com|youtube.com\" gateway=192.168.1.1 victim=192.168.1.100\n"\
 "rmmod dnsfirewall.ko"
 
 static struct nf_hook_ops netfilter_ops;
